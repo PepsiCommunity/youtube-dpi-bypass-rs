@@ -24,6 +24,10 @@ cargo build --release
 
 ### 1. Запуск программы
 
+Скачайте собранный бинарник из [релизов](https://github.com/PepsiCommunity/youtube-dpi-bypass-rs/releases)  
+
+или  
+
 ```bash
 cargo run --release
 ```
