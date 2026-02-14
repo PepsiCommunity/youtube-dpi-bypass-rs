@@ -1,4 +1,4 @@
-name: Build Project
+name: Build and Release
 
 on:
     push:
@@ -14,18 +14,23 @@ jobs:
                 include:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
-                      artifact_name: mc-oauth
-                      asset_name: mc-oauth-linux-amd64
+                      artifact_name: youtube-dpi-bypass-rs
+                      asset_name: youtube-dpi-bypass-linux-amd64
 
                     - os: windows-latest
-                      target: x86_64-pc-windows-gnu
-                      artifact_name: mc-oauth.exe
-                      asset_name: mc-oauth-windows-amd64.exe
+                      target: x86_64-pc-windows-msvc
+                      artifact_name: youtube-dpi-bypass-rs.exe
+                      asset_name: youtube-dpi-bypass-windows-amd64.exe
 
                     - os: macos-latest
                       target: x86_64-apple-darwin
-                      artifact_name: mc-oauth
-                      asset_name: mc-oauth-macos-amd64
+                      artifact_name: youtube-dpi-bypass-rs
+                      asset_name: youtube-dpi-bypass-macos-amd64
+
+                    - os: macos-latest
+                      target: aarch64-apple-darwin
+                      artifact_name: youtube-dpi-bypass-rs
+                      asset_name: youtube-dpi-bypass-macos-arm64
 
         steps:
             - uses: actions/checkout@v4
@@ -35,18 +40,6 @@ jobs:
 
             - name: Add target
               run: rustup target add ${{ matrix.target }}
-
-            - name: Install Linux ARM dependencies
-              if: matrix.target == 'aarch64-unknown-linux-gnu'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-            - name: Set linker for Linux ARM
-              if: matrix.target == 'aarch64-unknown-linux-gnu'
-              run: |
-                  echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
-                  echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
 
             - uses: Swatinem/rust-cache@v2
               with:
@@ -59,13 +52,37 @@ jobs:
                   cache-targets: "true"
 
             - name: Build
-              uses: actions-rs/cargo@v1
-              with:
-                  command: build
-                  args: --release --target ${{ matrix.target }}
+              run: cargo build --release --target ${{ matrix.target }}
 
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: ${{ matrix.asset_name }}
                   path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+    release:
+        name: Create Release
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Download all artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+
+            - name: Display structure of downloaded files
+              run: ls -R artifacts
+
+            - name: Create Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: artifacts/*/*
+                  generate_release_notes: true
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
