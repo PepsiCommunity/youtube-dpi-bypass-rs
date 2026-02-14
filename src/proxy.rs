@@ -11,8 +11,9 @@ pub async fn handle_connection(
     stream: TcpStream,
     spoof_map: SpoofMap,
     cert_cache: Arc<CertCache>,
+    auth_token: Option<String>,
 ) -> Result<()> {
-    let (stream, host, port) = parse_connect_request(stream).await?;
+    let (stream, host, port) = parse_connect_request(stream, auth_token).await?;
     let domain = normalize_domain(&host);
 
     if let Some(spoof_domain) = spoof_map.get_spoof(&domain) {
@@ -23,7 +24,10 @@ pub async fn handle_connection(
     }
 }
 
-async fn parse_connect_request(stream: TcpStream) -> Result<(TcpStream, String, u16)> {
+async fn parse_connect_request(
+    stream: TcpStream,
+    expected_auth: Option<String>,
+) -> Result<(TcpStream, String, u16)> {
     let mut reader = BufReader::new(stream);
     let mut first_line = String::new();
 
@@ -45,12 +49,38 @@ async fn parse_connect_request(stream: TcpStream) -> Result<(TcpStream, String, 
     };
 
     // Read headers until empty line
+    let mut proxy_auth: Option<String> = None;
     let mut line = String::new();
     loop {
         line.clear();
         reader.read_line(&mut line).await?;
         if line == "\r\n" || line == "\n" || line.is_empty() {
             break;
+        }
+
+        // Check for Proxy-Authorization header
+        if line.to_lowercase().starts_with("proxy-authorization:") {
+            if let Some(auth_value) = line.split(':').nth(1) {
+                proxy_auth = Some(auth_value.trim().to_string());
+            }
+        }
+    }
+
+    // Validate authentication if required
+    if let Some(expected) = expected_auth {
+        match proxy_auth {
+            Some(provided) if provided == expected => {
+                // Authentication successful
+            }
+            _ => {
+                // Authentication failed
+                let mut stream = reader.into_inner();
+                stream
+                    .write_all(b"HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Proxy\"\r\n\r\n")
+                    .await
+                    .ok();
+                return Err(anyhow!("Proxy authentication required"));
+            }
         }
     }
 
