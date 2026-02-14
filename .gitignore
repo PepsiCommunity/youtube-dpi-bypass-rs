@@ -1,0 +1,20 @@
+# Rust
+/target/
+Cargo.lock
+
+# Generated files
+mitm-ca.crt
+mitm-ca.key
+spoof.list
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude
+
+# OS
+.DS_Store
+Thumbs.db

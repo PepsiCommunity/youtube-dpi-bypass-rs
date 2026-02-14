@@ -1,0 +1,18 @@
+[package]
+name = "youtube-dpi-bypass-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.42", features = ["full"] }
+tokio-rustls = "0.26"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+rustls-pemfile = "2.2"
+rcgen = { version = "0.13", features = ["pem", "x509-parser"] }
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio", "server"] }
+http-body-util = "0.1"
+webpki-roots = "0.26"
+anyhow = "1.0"
+thiserror = "1.0"
+time = { version = "0.3", features = ["macros", "formatting"] }
