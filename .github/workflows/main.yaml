@@ -74,13 +74,19 @@ jobs:
               with:
                   path: artifacts
 
-            - name: Display structure of downloaded files
-              run: ls -R artifacts
+            - name: Rename artifacts
+              run: |
+                  mkdir -p release
+                  find artifacts -type f -name "youtube-dpi-bypass-rs*" | while read file; do
+                      dir=$(basename $(dirname "$file"))
+                      cp "$file" "release/$dir"
+                  done
+                  ls -lh release/
 
             - name: Create Release
               uses: softprops/action-gh-release@v2
               with:
-                  files: artifacts/*/*
+                  files: release/*
                   generate_release_notes: true
                   draft: false
                   prerelease: false
